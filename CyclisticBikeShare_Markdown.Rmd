@@ -1,0 +1,231 @@
+---
+title: "CyclisticBikeShare_Markdown"
+author: "Shrey Chaudhari"
+date: "2024-03-18"
+output: html_document
+---
+## Cyclistic Bike Share Data Analysis
+
+**Introduction**<br>
+This case study is the Capstone Project for the Google Data Analytics Professional Certificate. In this case study, I am a junior data analyst in the marketing analyst team at Cyclistic, a fictitious bike-share company in Chicago.
+
+Cyclistic is a bike-share programme with over 5,800 bicycles and 600 docking stations. Cyclistic distinguishes itself by also providing reclining bikes, hand tricycles, and cargo bikes, making bike-share more accessible to people with disabilities and riders who cannot use a standard two-wheeled bike. The majority of riders prefer traditional bikes, with approximately 8% opting for assistive options. Cyclists are more likely to ride for pleasure, but about 30% use them to commute to work every day.
+
+Cyclistic launched a successful bike-share programme in 2016. Since then, the programme has grown to a fleet of 5,824 geotracked bicycles that are locked into a network of 692 stations throughout Chicago. The bikes can be unlocked at any time from any station in the system and returned to any other station in the system.
+
+The director of marketing believes that increasing the number of annual memberships is critical to the company's future success. As a result, my team is interested in learning how casual riders and annual members use Cyclistic bikes differently. Our team will develop a new marketing strategy based on the findings to convert casual riders into annual members. However, Cyclistic executives must first approve our recommendations, which must be supported by compelling data insights and professional data visualisations.
+
+There are 3 pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as Casual riders. Customers who purchase annual memberships are Cyclistic members.
+
+In order to answer the key business questions, I followed the steps of the data analysis process: ask, prepare, process, analyze, share, and act.
+
+**Ask**<br>
+How do Annual members and Casual riders use Cyclistic bikes differently?<br>
+
+The key stakeholders are:<br>
+
+Lily Moreno, the director of marketing and my manager.<br>
+Cyclistic executive team.
+
+**Prepare**<br>
+1.The data I used is Cyclistic’s Historical Trip Data to analyze and identify trends.<br>
+
+2.The previous 12 months data from 01 April 2020 to 30th March 2021 is used for analysis.<br>
+
+3.The data is stored in CSV files. Each file contains one month data. Thus a total of 12 .csv files.<br>
+
+4.The data is structured data ie., Organised data.<br>
+
+5.The datasets have a different name because Cyclistic is a fictional company. For the purposes of this case study, the datasets are appropriate.<br>
+
+6.The data has been made available by Motivate International Inc.<br>
+
+7.As this data is collected by a real bike sharing company in Chicago, there are no issues with bias or credibility. So its Reliable, Original, Current and Cited (as in ROCCC).<br>
+
+As of data Integrity, its Accurate, Consistent and Trustworthy.<br>
+
+```{r}
+installed.packages("tidyverse") # Data cleaning
+installed.packages("lubridate") # Date manipulation
+installed.packages("data.table") # Data exporting
+
+library(tidyverse)
+library(lubridate)
+library(data.table)
+library(dplyr)
+```
+
+#### Twelve-month data files were merged to create a single data frame and then the monthly data were dropped from the environment to tidy up the environment.
+
+```{r}
+data_jan23<-read.csv("Jan2023-divvy-tripdata.csv",header=TRUE)
+data_feb23<-read.csv("Feb2023-divvy-tripdata.csv",header=TRUE)
+data_mar23<-read.csv("Mar2023-divvy-tripdata.csv",header=TRUE)
+data_apr23<-read.csv("Apr2023-divvy-tripdata.csv",header=TRUE)
+data_may23<-read.csv("May2023-divvy-tripdata.csv",header=TRUE)
+data_june23<-read.csv("Jun2023-divvy-tripdata.csv",header=TRUE)
+data_jul23<-read.csv("Jul2023-divvy-tripdata.csv",header=TRUE)
+data_aug23<-read.csv("Aug2023-divvy-tripdata.csv",header=TRUE)
+data_sept23<-read.csv("Sep2023-divvy-tripdata.csv",header=TRUE)
+data_oct23<-read.csv("Oct2023-divvy-tripdata.csv",header=TRUE)
+data_nov23<-read.csv("Nov2023-divvy-tripdata.csv",header=TRUE)
+data_dec23<-read.csv("Dec2023-divvy-tripdata.csv",header=TRUE)
+```
+
+#### Merge all files into single
+```{r}
+annual_data <-rbind(data_jan23,data_feb23,data_mar23,data_apr23,data_may23,data_june23,data_jul23,data_aug23,data_sept23,data_oct23,data_nov23,data_dec23)
+```
+
+#### Create a copy of merged file
+```{r}
+annual_data2 <- annual_data
+```
+#### Summary of data
+```{r}
+head(annual_data2)
+glimpse(annual_data2)
+colnames(annual_data2)
+```
+
+#### The merged and copied data frame was checked for duplicates and null values.
+```{r}
+duplicate_rows<- annual_data2 %>%
+    filter(duplicated(annual_data2))
+print(duplicate_rows)
+
+annual_data2<-distinct(annual_data2)
+
+ null_rows<-annual_data2[apply(is.na(annual_data2),1,any),]
+ 
+ cleaned_annual_data<- annual_data2 %>%
+     rename(member_type=member_casual,bike_type=rideable_type )
+ colnames(cleaned_annual_data)
+ head(cleaned_annual_data)
+```
+  
+#### Ride length in seconds and minutes were created as new variable.
+ 
+```{r} 
+ cleaned_annual_data$ride_length_seconds<- ymd_hms(cleaned_annual_data$ended_at)- ymd_hms(cleaned_annual_data$started_at)
+ cleaned_annual_data$ride_length_minutes<-as.numeric(cleaned_annual_data$ride_length_seconds, units="mins")
+ 
+ cleaned_annual_data$start_year<-format(ymd_hms(cleaned_annual_data$started_at), format="%y-%m-%d")
+ cleaned_annual_data$start_month<-lubridate::month(cleaned_annual_data$start_year, label = TRUE, abbr = FALSE)
+ 
+ cleaned_annual_data$end_year<-format(ymd_hms(cleaned_annual_data$ended_at), format="%y-%m-%d")
+ cleaned_annual_data$end_month<-lubridate::month(cleaned_annual_data$end_year, label=TRUE, abbr=FALSE)
+ 
+ cleaned_annual_data$start_day_of_week<-lubridate::wday(cleaned_annual_data$start_year, label=TRUE, abbr=FALSE)
+ 
+ cleaned_annual_data<-cleaned_annual_data [,!(names(cleaned_annual_data) %in% c("ride_id","start_station_id","end_station_id","start_lat,start_lng","end_lat","end_lng"))]
+```
+
+#### Annual Rides
+```{r}
+ nrow(cleaned_annual_data)
+ print(nrow)
+```
+
+#### Count ride by members
+```{r}
+ cleaned_annual_data %>% count(member_type)
+```
+
+#### Total rides by bike type
+```{r}
+cleaned_annual_data %>% 
+   group_by(bike_type)%>%
+   count(bike_type)
+```
+ 
+#### Number of rides by day of week
+```{r} 
+cleaned_annual_data%>%
+   group_by(member_type)%>%
+   count(start_day_of_week)
+```
+
+#### Load ggplot
+```{r}
+  installed.packages("ggplot")
+ library(ggplot2)
+```
+
+ 
+#### As this study contains more than 5 million observation, the plots give scientific notations. To overcome this scenario follow this.
+
+```{r} 
+options(scipen=999)
+```
+
+#### Average trip duration by member
+```{r} 
+cleaned_annual_data%>% 
+   group_by(member_type)%>%
+   drop_na() %>%
+   summarise(mean_ride_length=mean(ride_length_minutes))
+```
+
+```{r}
+cleaned_annual_data %>%
+   group_by(member_type)%>%
+   ggplot(aes(x=bike_type, fill=member_type, colors=member_type))+
+   geom_bar()+
+   theme_bw()+
+   labs(title = "Bike Type vs. Member_type",x="Bicycle_type", y="Number of trips")
+```
+#### Plot ride by month
+```{r}
+
+ cleaned_annual_data%>% 
+   group_by(member_type)%>%
+   ggplot(aes(x=start_month, fill=member_type, colors=member_type))+
+   geom_bar()+
+   theme_bw()+
+   theme(axis.text.x=element_text(angle=25))+
+   labs(title = "Number of Trips by Month",x="Start_month", y="Number of trips")
+```
+ 
+#### Plot number of rides by day
+```{r}
+cleaned_annual_data%>%
+   group_by(member_type)%>%
+   ggplot(aes(x=start_day_of_week, fill=member_type,color=member_type))+
+   geom_bar()
+```   
+#### Polpular start station for annual = member
+```{r}
+cleaned_annual_data%>%
+   group_by(member_type,start_station_name)%>%
+   summarise(number_of_ride=n())%>%
+   filter(start_station_name!="", member_type=="member")%>%
+   arrange(-number_of_ride)%>%
+   head(5)%>%
+   select(-member_type)
+``` 
+#### Polpular start station for annual = casual
+```{r}
+cleaned_annual_data%>%
+   group_by(member_type,start_station_name)%>%
+   summarise(number_of_ride=n())%>%
+   filter(start_station_name!="", member_type=="casual")%>%
+   arrange(-number_of_ride)%>%
+   head(5)%>%
+   select(-member_type)
+```
+
+**Act**<br>
+**Conclusion**<br>
+1.Annual members exhibit higher ride completion rates compared to casual riders, indicating a stronger commitment to utilizing the bike-sharing service.<br>
+2.Fridays, Saturdays, and Sundays emerge as the preferred usage days among casual riders, highlighting a trend towards weekend leisure rides.<br>
+3.Docked_bike stands out as the preferred rideable type for both casual and member riders, showcasing its popularity and suitability for various user preferences.<br>
+4.The average ride length among casual riders is notably more than double that of members, suggesting divergent usage patterns between the two groups.<br>
+5.This disparity in ride lengths implies that annual members primarily utilize bike share services for daily commuting purposes, whereas casual riders predominantly opt for leisurely rides, especially during weekends.<br>
+6.The demand for bike-sharing services experiences substantial fluctuations throughout the year, with summers witnessing peak usage and winters witnessing a significant decline of over 50%, likely due to adverse weather conditions such as snowfall in Chicago.<br>
+
+**Recommendation**<br>
+
+1.Introducing a new Weekend-Only Annual Membership package can effectively target current Weekend casual riders, enticing them with exclusive benefits and discounts tailored to their usage patterns.<br>
+2.Considering the preference for docked bikes among both casual riders and annual members, increasing the inventory of docked bikes is a strategic move to meet the demand and enhance customer satisfaction.<br>
+3.Implementing promotions specifically designed for current Weekday casual riders is crucial. These promotions should highlight the financial advantages of switching to a membership model, showcasing the cost savings compared to purchasing single passes or full-day passes over a year-long period.
